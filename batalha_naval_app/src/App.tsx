@@ -7,24 +7,24 @@ interface Posicao {
 }
 
 const App: React.FC = () => {
-  const [nome, setNome] = useState("");
-  const [posicaoCentral, setPosicaoCentral] = useState<Posicao>({ x: 0, y: 0 });
-  const [orientacao, setOrientacao] = useState<"horizontal" | "vertical">("horizontal");
+  const [navios, setNavios] = useState([
+    { nome: "", posicaoCentral: { x: 0, y: 0 }, orientacao: "horizontal" as "horizontal" | "vertical" },
+    { nome: "", posicaoCentral: { x: 0, y: 0 }, orientacao: "horizontal" as "horizontal" | "vertical" }
+  ]);
   const [correlationId, setCorrelationId] = useState("");
   const [mensagem, setMensagem] = useState("");
-  const [registroRealizado, setRegistroRealizado] = useState(false);
+  const [naviosRegistrados, setNaviosRegistrados] = useState(0);
 
-  const registrarNavio = async () => {
+  const registrarNavio = async (index: number) => {
     try {
       const response = await axios.post("http://127.0.0.1:8000/registrar", {
-        nome,
-        posicao_central: [posicaoCentral.x, posicaoCentral.y],
-        orientacao,
+        nome: navios[index].nome,
+        posicao_central: [navios[index].posicaoCentral.x, navios[index].posicaoCentral.y],
+        orientacao: navios[index].orientacao,
         correlation_id: correlationId,
       });
       setMensagem(response.data.message);
-      setRegistroRealizado(true);
-      // Aqui você pode salvar a chave e as posições retornadas para uso futuro
+      setNaviosRegistrados((prev) => prev + 1);
     } catch (error: any) {
       setMensagem(error.response?.data?.detail || "Erro ao registrar navio");
     }
@@ -33,7 +33,7 @@ const App: React.FC = () => {
   const enviarAtaque = async (alvo: string, posicaoAtaque: Posicao) => {
     try {
       const response = await axios.post("http://127.0.0.1:8000/atacar", {
-        atacante: nome,
+        atacante: navios[0].nome, // Supondo que o primeiro navio seja o atacante
         alvo,
         posicao_ataque: [posicaoAtaque.x, posicaoAtaque.y],
         correlation_id: correlationId,
@@ -47,32 +47,47 @@ const App: React.FC = () => {
   return (
     <div style={{ padding: 20 }}>
       <h1>Jogo de Batalha Naval</h1>
-      {!registroRealizado ? (
+      {naviosRegistrados < 2 ? (
         <div>
-          <h2>Registrar Navio</h2>
+          <h2>Registrar Navio {naviosRegistrados + 1}</h2>
           <input
             type="text"
-            placeholder="Nome do navio (máx. 20 caracteres)"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
+            placeholder="Nome do navio"
+            value={navios[naviosRegistrados].nome}
+            onChange={(e) => {
+              const newNavios = [...navios];
+              newNavios[naviosRegistrados].nome = e.target.value;
+              setNavios(newNavios);
+            }}
           />
           <br />
           <input
             type="number"
-            placeholder="Posição X (central)"
-            onChange={(e) =>
-              setPosicaoCentral({ ...posicaoCentral, x: parseInt(e.target.value) })
-            }
+            placeholder="Posição X"
+            onChange={(e) => {
+              const newNavios = [...navios];
+              newNavios[naviosRegistrados].posicaoCentral.x = parseInt(e.target.value);
+              setNavios(newNavios);
+            }}
           />
           <input
             type="number"
-            placeholder="Posição Y (central)"
-            onChange={(e) =>
-              setPosicaoCentral({ ...posicaoCentral, y: parseInt(e.target.value) })
-            }
+            placeholder="Posição Y"
+            onChange={(e) => {
+              const newNavios = [...navios];
+              newNavios[naviosRegistrados].posicaoCentral.y = parseInt(e.target.value);
+              setNavios(newNavios);
+            }}
           />
           <br />
-          <select value={orientacao} onChange={(e) => setOrientacao(e.target.value as "horizontal" | "vertical")}>
+          <select
+            value={navios[naviosRegistrados].orientacao}
+            onChange={(e) => {
+              const newNavios = [...navios];
+              newNavios[naviosRegistrados].orientacao = e.target.value as "horizontal" | "vertical";
+              setNavios(newNavios);
+            }}
+          >
             <option value="horizontal">Horizontal</option>
             <option value="vertical">Vertical</option>
           </select>
@@ -84,12 +99,11 @@ const App: React.FC = () => {
             onChange={(e) => setCorrelationId(e.target.value)}
           />
           <br />
-          <button onClick={registrarNavio}>Registrar Navio</button>
+          <button onClick={() => registrarNavio(naviosRegistrados)}>Registrar Navio</button>
         </div>
       ) : (
         <div>
           <h2>Controle do Ataque</h2>
-          {/* Exemplo de ataque: você pode expandir para permitir selecionar posições na grid */}
           <button onClick={() => enviarAtaque("NomeDoAlvo", { x: 10, y: 5 })}>
             Atacar posição (10, 5)
           </button>
